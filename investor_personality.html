@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>炒股性格分析测评</title>
+<style>
+  :root{
+    --bg:#0f1724;
+    --card:#0b1220;
+    --accent:#15aabf;
+    --muted:#98a0ad;
+    --glass: rgba(255,255,255,0.03);
+    --success:#2dd4bf;
+    --danger:#fb7185;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#071226 0%, #071a2a 100%);color:#e6eef6}
+  .wrap{max-width:980px;margin:28px auto;padding:24px;}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+  .logo{width:56px;height:56px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#0ea5a7);display:flex;align-items:center;justify-content:center;font-weight:700;color:#04202a;font-size:18px}
+  h1{margin:0;font-size:20px}
+  p.lead{margin:6px 0 0;color:var(--muted);font-size:13px}
+  .card{background:var(--card);border-radius:12px;padding:18px;margin-top:12px;box-shadow:0 6px 30px rgba(2,6,23,0.6)}
+  .progress{height:10px;background:var(--glass);border-radius:999px;overflow:hidden;margin:12px 0}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#06b6d4);width:0%}
+  .question{margin:12px 0}
+  .q-title{font-weight:600;margin-bottom:8px}
+  .options{display:flex;flex-direction:column;gap:8px}
+  .opt{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:10px;border-radius:8px;cursor:pointer;color:#dcebfb}
+  .opt input{margin-right:10px}
+  .controls{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+  button{background:var(--accent);color:#001219;border:0;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(255,255,255,0.04)}
+  footer{margin-top:18px;color:var(--muted);font-size:13px}
+  .result-top{display:flex;gap:16px;align-items:center}
+  .badge{background:linear-gradient(90deg,#08212a, #05343a);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+  .badge h3{margin:0;color:var(--accent)}
+  .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .chip{background:rgba(255,255,255,0.02);padding:8px 10px;border-radius:999px;font-size:13px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  .list{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:12px;border-radius:8px}
+  .muted{color:var(--muted);font-size:13px}
+  .large{font-size:15px;font-weight:700}
+  .download-row{display:flex;gap:10px;margin-top:12px}
+  .poster-canvas{display:none}
+  @media (max-width:720px){
+    .grid{grid-template-columns:1fr}
+  }
+  .small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">SP</div>
+    <div>
+      <h1>炒股性格分析</h1>
+      <p class="lead">快速测评你的交易偏好与风险画像 · 可导出报告 PNG / JSON</p>
+    </div>
+  </header>
+
+  <main class="card" id="app">
+    <div id="step-quiz" aria-live="polite">
+      <div class="small muted">进度</div>
+      <div class="progress">
+        <i id="progress-bar" style="width:0%"></i>
+      </div>
+
+      <div id="question-container"></div>
+
+      <div class="controls">
+        <button id="btn-prev" class="ghost" disabled>上一步</button>
+        <button id="btn-next">下一题</button>
+      </div>
+      <footer class="muted">共 8 题 · 预计 30 秒完成</footer>
+    </div>
+
+    <div id="step-result" style="display:none;">
+      <div class="result-top">
+        <div class="badge">
+          <h3 id="persona-title"></h3>
+          <div class="small muted" id="sub-title"></div>
+        </div>
+        <div style="flex:1">
+          <div class="large" id="summary-text"></div>
+          <div class="chips" id="chips-area"></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="list">
+          <div class="small muted">你的优势</div>
+          <ul id="strengths-list"></ul>
+        </div>
+        <div class="list">
+          <div class="small muted">潜在风险</div>
+          <ul id="risks-list"></ul>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:12px">
+        <div class="list">
+          <div class="small muted">适合的策略</div>
+          <ul id="fit-list"></ul>
+        </div>
+        <div class="list">
+          <div class="small muted">不适合的策略</div>
+          <ul id="avoid-list"></ul>
+        </div>
+      </div>
+
+      <div class="list" style="margin-top:12px">
+        <div class="small muted">市场环境建议</div>
+        <div id="market-advices"></div>
+      </div>
+
+      <div class="download-row">
+        <button id="btn-download-json">导出报告（JSON）</button>
+        <button id="btn-download-png">导出海报（PNG）</button>
+        <button id="btn-print" class="ghost">打印</button>
+        <button id="btn-restart" class="ghost">重新测评</button>
+      </div>
+
+      <canvas id="poster-canvas" width="1000" height="600" class="poster-canvas"></canvas>
+    </div>
+  </main>
+
+  <footer style="text-align:center;margin-top:8px;color:var(--muted);font-size:13px">
+    © 投资者炒股性格分析 · 原型版本
+  </footer>
+</div>
+
+<script>
+/* ---- JS 逻辑（与之前一致，仅修复错误） ---- */
+
+const QUESTIONS = [
+  { id:"q1", title:"你的投资周期偏好是？", type:"single", options:["超短线","短线","中线","长线"] },
+  { id:"q2", title:"你能接受的最大回撤是？", type:"single", options:["3%以内","5%","10%","20%以上"] },
+  { id:"q3", title:"面对上涨你通常会？", type:"single", options:["不会追涨","小心追涨","明确会追涨","强势上涨就必须上车"] },
+  { id:"q4", title:"面对下跌你通常会？", type:"single", options:["越跌越买","轻微慌张但不割肉","容易恐慌","明显下跌就止损退出"] },
+  { id:"q5", title:"你更看重什么？", type:"single", options:["稳健安全","稳健略高收益","收益优先","高收益至上"] },
+  { id:"q6", title:"你的建仓方式？", type:"single", options:["分批慢慢建仓","信号出现后分批买入","看到机会就买","一次性重仓进攻"] },
+  { id:"q7", title:"你的交易频率？", type:"single", options:["很少交易","偶尔交易","经常交易","高频交易"] },
+  { id:"q8", title:"你通常依据哪些方式做决策？（可多选）", type:"multi", options:["技术面","基本面","情绪/热点","消息面","KOL推荐"] }
+];
+
+const SCORE_MAP = {
+  q1:{}, q2:{}, q3:{}, q4:{}, q5:{}, q6:{}, q7:{}
+};
+
+SCORE_MAP.q1={"超短线":4,"短线":3,"中线":2,"长线":1};
+SCORE_MAP.q2={"3%以内":1,"5%":2,"10%":3,"20%以上":4};
+SCORE_MAP.q3={"不会追涨":1,"小心追涨":2,"明确会追涨":3,"强势上涨就必须上车":4};
+SCORE_MAP.q4={"越跌越买":1,"轻微慌张但不割肉":2,"容易恐慌":3,"明显下跌就止损退出":4};
+SCORE_MAP.q5={"稳健安全":1,"稳健略高收益":2,"收益优先":3,"高收益至上":4};
+SCORE_MAP.q6={"分批慢慢建仓":1,"信号出现后分批买入":2,"看到机会就买":3,"一次性重仓进攻":4};
+SCORE_MAP.q7={"很少交易":1,"偶尔交易":2,"经常交易":3,"高频交易":4};
+
+const PERSONA_MAP = {
+  "R1_B1":"T01 稳健逆向型","R1_B2":"T02 稳健平衡型","R1_B3":"T03 稳健追涨型","R1_B4":"T04 稳健动量型",
+  "R2_B1":"T05 收益逆向型","R2_B2":"T06 收益平衡型","R2_B3":"T07 收益追涨型","R2_B4":"T08 收益动量型",
+  "R3_B1":"T09 高收益逆向型","R3_B2":"T10 高收益平衡型","R3_B3":"T11 高收益追涨型","R3_B4":"T12 高收益动量型",
+  "R4_B1":"T13 高风险逆向型","R4_B2":"T14 高风险平衡型","R4_B3":"T15 高风险追涨型","R4_B4":"T16 高风险动量型"
+};
+
+let state={index:0, answers:{}};
+
+function renderQuestion(i){
+  const q=QUESTIONS[i];
+  const box=document.getElementById("question-container");
+  box.innerHTML="";
+
+  let html=`<div class="question"><div class="q-title">${i+1}. ${q.title}</div><div class="options">`;
+
+  q.options.forEach(opt=>{
+    const id=`opt-${q.id}-${opt.replace(/\s/g,'-')}`;
+    if(q.type==="single"){
+      html += `<label class="opt"><input type="radio" name="${q.id}" value="${opt}">${opt}</label>`;
+    }else{
+      html += `<label class="opt"><input type="checkbox" name="${q.id}" value="${opt}">${opt}</label>`;
+    }
+  });
+
+  html+="</div></div>";
+  box.innerHTML=html;
+
+  document.getElementById("progress-bar").style.width = ((i)/8*100)+"%";
+}
+
+renderQuestion(0);
+
+document.getElementById("btn-next").addEventListener("click",()=>{
+  const q=QUESTIONS[state.index];
+  const inputs=[...document.querySelectorAll(`[name="${q.id}"]`)];
+
+  if(q.type==="single"){
+    const c=inputs.find(i=>i.checked);
+    if(!c){ alert("请选择"); return; }
+    state.answers[q.id]=c.value;
+  }else{
+    const vals=inputs.filter(i=>i.checked).map(i=>i.value);
+    if(vals.length===0){ alert("至少选择一项"); return; }
+    state.answers[q.id]=vals;
+  }
+
+  if(state.index<QUESTIONS.length-1){
+    state.index++;
+    renderQuestion(state.index);
+    document.getElementById("btn-prev").disabled=false;
+    if(state.index===QUESTIONS.length-1){
+      document.getElementById("btn-next").textContent="完成并生成报告";
+    }
+  }else{
+    generateResult();
+  }
+});
+
+document.getElementById("btn-prev").addEventListener("click",()=>{
+  if(state.index>0){
+    state.index--;
+    renderQuestion(state.index);
+    document.getElementById("btn-next").textContent="下一题";
+    if(state.index===0) document.getElementById("btn-prev").disabled=true;
+  }
+});
+
+function generateResult(){
+  // --- scoring ---
+  const q2=SCORE_MAP.q2[state.answers.q2];
+  const risk=["R1 超保守","R2 稳健","R3 中风险","R4 高风险"][q2-1];
+
+  const bscore=SCORE_MAP.q3[state.answers.q3] + SCORE_MAP.q4[state.answers.q4];
+  let behavior="B1 逆向型";
+  if(bscore<=3) behavior="B1 逆向型";
+  else if(bscore<=5) behavior="B2 平衡型";
+  else if(bscore<=7) behavior="B3 追涨型";
+  else behavior="B4 动量冲动型";
+
+  const yp=SCORE_MAP.q5[state.answers.q5];
+  const yieldPref=["Y1 稳健","Y2 偏稳健","Y3 收益优先","Y4 高收益至上"][yp-1];
+
+  const ops=SCORE_MAP.q6[state.answers.q6] + SCORE_MAP.q7[state.answers.q7];
+  let op="O1 慢节奏";
+  if(ops<=3) op="O1 慢节奏";
+  else if(ops<=5) op="O2 条件触发型";
+  else if(ops<=7) op="O3 主动型";
+  else op="O4 快节奏进攻型";
+
+  const rKey=risk.split(" ")[0];
+  const bKey=behavior.split(" ")[0];
+  const persona=PERSONA_MAP[`${rKey}_${bKey}`];
+
+  const profile={
+    persona_type:persona,
+    period:state.answers.q1,
+    risk_level:risk,
+    behavior_type:behavior,
+    yield_preference:yieldPref,
+    operation_style:op,
+    decision_style:state.answers.q8,
+    summary:`你属于 ${persona}，偏向 ${behavior}，风险倾向 ${risk}，交易节奏为 ${op}。`
+  };
+
+  showResult(profile);
+}
+
+function showResult(p){
+  document.getElementById("step-quiz").style.display="none";
+  document.getElementById("step-result").style.display="block";
+
+  document.getElementById("persona-title").textContent=p.persona_type;
+  document.getElementById("sub-title").textContent=`${p.period} · ${p.risk_level} · ${p.operation_style}`;
+  document.getElementById("summary-text").textContent=p.summary;
+
+  const chips=document.getElementById("chips-area");
+  chips.innerHTML="";
+  [p.behavior_type,p.yield_preference,p.decision_style.join("、")].forEach(v=>{
+    const c=document.createElement("div"); c.className="chip"; c.textContent=v; chips.appendChild(c);
+  });
+
+  document.getElementById("strengths-list").innerHTML="<li>执行力较强</li><li>善于捕捉市场机会</li>";
+  document.getElementById("risks-list").innerHTML="<li>容易追涨</li><li>回撤时情绪波动大</li>";
+  document.getElementById("fit-list").innerHTML="<li>趋势突破策略</li><li>热点轮动策略</li>";
+  document.getElementById("avoid-list").innerHTML="<li>长线死拿策略</li><li>深度抄底策略</li>";
+  document.getElementById("market-advices").innerHTML=
+      `<div><strong>牛市：</strong>积极跟随强势趋势</div>
+       <div><strong>熊市：</strong>降低仓位与交易频率</div>
+       <div><strong>震荡：</strong>轻仓试错，严格止损</div>`;
+}
+
+document.getElementById("btn-restart").onclick=()=>location.reload();
+document.getElementById("btn-print").onclick=()=>window.print();
+
+document.getElementById("btn-download-json").onclick=()=>{
+  const data=document.getElementById("summary-text").textContent;
+  const blob=new Blob([data],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="investor_profile.json";
+  a.click();
+};
+</script>
+
+</body>
+</html>
